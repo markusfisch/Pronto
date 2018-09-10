@@ -38,7 +38,7 @@ var M = Math,
 	pointersY = [],
 	keysDown = [],
 	mouseDown = false,
-	viewRotX = .5,
+	viewRotX = 0,
 	viewRotY = 0,
 	downX,
 	downY,
@@ -418,8 +418,7 @@ function updateLight(x, y, z) {
 
 function updateView() {
 	translate(viewMat, idMat, 0, 0, -15)
-	rotate(viewMat, viewMat, viewRotX, 1, 0, 0)
-	rotate(viewMat, viewMat, -viewRotY, 0, 1, 0)
+	rotate(viewMat, viewMat, -.5, .1, 1, 0)
 }
 
 function run() {
@@ -471,13 +470,16 @@ function pointerMove(event) {
 		viewRotX -= y - downY
 		viewRotY -= x - downX
 
-		viewRotX = M.min(viewRotX, M.PI / 2.5)
-		viewRotX = M.max(viewRotX, 0.1)
-
 		downX = x
 		downY = y
 
-		updateView()
+		var mat = new FA(idMat)
+		rotate(mat, mat, viewRotX, 1, 0, 0)
+		rotate(mat, mat, -viewRotY, 0, 1, 0)
+		for (var model, i = entitiesLength; i--;) {
+			var e = entities[i]
+			multiply(e.matrix, mat, e.origin)
+		}
 	}
 }
 
@@ -633,24 +635,43 @@ function createCube() {
 }
 
 function createEntities() {
-	var cubeModel = createCube()
-
 	entities = []
 
-	entities.push({
-		matrix: new FA(idMat),
-		model: cubeModel,
-		color: playerOneColor
-	})
+	var cubeModel = createCube(),
+		cubeSize = 2,
+		cubeRad = cubeSize * .5,
+		dim = 4,
+		offset = dim * cubeSize * .5 - cubeRad,
+		mag = .95
 
-	var floorMat = new FA(idMat)
-	translate(floorMat, floorMat, 0, -2, 0)
-	scale(floorMat, floorMat, 3, .1, 3)
-	entities.push({
-		matrix: floorMat,
-		model: cubeModel,
-		color: playerTwoColor
-	})
+	for (var y = 0; y < dim; ++y) {
+		for (var x = 0; x < dim; ++x) {
+			var mat = new FA(idMat)
+			translate(mat, mat,
+					-offset + x * cubeSize,
+					-offset + y * cubeSize,
+					cubeRad)
+			scale(mat, mat, mag, mag, mag)
+			entities.push({
+				origin: new FA(mat),
+				matrix: mat,
+				model: cubeModel,
+				color: playerOneColor
+			})
+			mat = new FA(idMat)
+			translate(mat, mat,
+					-offset + x * cubeSize,
+					-offset + y * cubeSize,
+					-cubeRad)
+			scale(mat, mat, mag, mag, mag)
+			entities.push({
+				origin: new FA(mat),
+				matrix: mat,
+				model: cubeModel,
+				color: playerTwoColor
+			})
+		}
+	}
 
 	entitiesLength = entities.length
 }
