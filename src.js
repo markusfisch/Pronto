@@ -13,7 +13,7 @@ var M = Math,
 	projMat = new FA(idMat),
 	viewMat = new FA(idMat),
 	modelViewMat = new FA(16),
-	horizon = 300,
+	horizon = 100,
 	staticLightViewMat = new FA(16),
 	lightProjMat = new FA(idMat),
 	lightViewMat = new FA(idMat),
@@ -37,13 +37,8 @@ var M = Math,
 	pointersX = [],
 	pointersY = [],
 	keysDown = [],
-	mouseDown = false,
-	viewRotX = 0,
-	viewRotY = 0,
-	downX,
-	downY,
-	playerOneColor = [0, .58, 1, 1],
-	playerTwoColor = [1, .2, 0, 1]
+	cursor,
+	cursorY = 0
 
 M.PI2 = M.PI2 || M.PI / 2
 M.TAU = M.TAU || M.PI * 2
@@ -416,13 +411,22 @@ function updateLight(x, y, z) {
 	lightDirection[2] = lightViewMat[10]
 }
 
-function updateView() {
-	translate(viewMat, idMat, 0, 0, -15)
-	rotate(viewMat, viewMat, -.5, .1, 1, 0)
+function updateView(x, y, z) {
+	translate(viewMat, idMat, x, y, z - 15)
+	rotate(viewMat, viewMat, .5, 1, 0, 0)
+	updateLight(x, y, z)
+}
+
+function update() {
+	var t = Date.now() * .002,
+		mag = 3
+	translate(cursor.matrix, idMat, M.cos(t) * mag, cursorY, M.sin(t) * mag)
+	rotate(cursor.matrix, cursor.matrix, -t % M.TAU, 0, 1, 0)
 }
 
 function run() {
 	requestAnimationFrame(run)
+	update()
 	draw()
 }
 
@@ -459,34 +463,16 @@ function setPointer(event, down) {
 
 function pointerUp(event) {
 	setPointer(event, false)
+	cursorY = 0
 }
 
 function pointerMove(event) {
 	setPointer(event, pointersLength)
-	if (pointersLength) {
-		var x = pointersX[0],
-			y = pointersY[0]
-
-		viewRotX -= y - downY
-		viewRotY -= x - downX
-
-		downX = x
-		downY = y
-
-		var mat = new FA(idMat)
-		rotate(mat, mat, viewRotX, 1, 0, 0)
-		rotate(mat, mat, -viewRotY, 0, 1, 0)
-		for (var model, i = entitiesLength; i--;) {
-			var e = entities[i]
-			multiply(e.matrix, mat, e.origin)
-		}
-	}
 }
 
 function pointerDown(event) {
 	setPointer(event, true)
-	downX = pointersX[0]
-	downY = pointersY[0]
+	cursorY = -1
 }
 
 function setKey(event, down) {
@@ -637,41 +623,21 @@ function createCube() {
 function createEntities() {
 	entities = []
 
-	var cubeModel = createCube(),
-		cubeSize = 2,
-		cubeRad = cubeSize * .5,
-		dim = 4,
-		offset = dim * cubeSize * .5 - cubeRad,
-		mag = .95
+	var cubeModel = createCube()
+	entities.push(cursor = {
+		matrix: new FA(idMat),
+		model: cubeModel,
+		color: [0, .58, 1, 1]
+	})
 
-	for (var y = 0; y < dim; ++y) {
-		for (var x = 0; x < dim; ++x) {
-			var mat = new FA(idMat)
-			translate(mat, mat,
-					-offset + x * cubeSize,
-					-offset + y * cubeSize,
-					cubeRad)
-			scale(mat, mat, mag, mag, mag)
-			entities.push({
-				origin: new FA(mat),
-				matrix: mat,
-				model: cubeModel,
-				color: playerOneColor
-			})
-			mat = new FA(idMat)
-			translate(mat, mat,
-					-offset + x * cubeSize,
-					-offset + y * cubeSize,
-					-cubeRad)
-			scale(mat, mat, mag, mag, mag)
-			entities.push({
-				origin: new FA(mat),
-				matrix: mat,
-				model: cubeModel,
-				color: playerTwoColor
-			})
-		}
-	}
+	var floorMat = new FA(idMat)
+	translate(floorMat, floorMat, 0, -3, 0)
+	scale(floorMat, floorMat, 4, .1, 4)
+	entities.push({
+		matrix: floorMat,
+		model: cubeModel,
+		color: skyColor
+	})
 
 	entitiesLength = entities.length
 }
@@ -770,6 +736,8 @@ function createShadowBuffer() {
 	gl.bindTexture(gl.TEXTURE_2D, shadowDepthTexture)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, shadowDepthTextureSize,
 		shadowDepthTextureSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
 
@@ -789,9 +757,9 @@ function createShadowBuffer() {
 }
 
 function createLight() {
-	setOrthogonal(lightProjMat, -10, 10, -10, 10, -40.0, 80)
+	setOrthogonal(lightProjMat, -10, 10, -10, 10, -60, 80)
 	translate(staticLightViewMat, idMat, 0, 0, -60)
-	rotate(staticLightViewMat, staticLightViewMat, M.PI2 * .5, 1, 1, 0)
+	rotate(staticLightViewMat, staticLightViewMat, M.PI2 * .5, 1, .5, 0)
 	updateLight(0, 0, 0)
 }
 
@@ -817,7 +785,7 @@ function init() {
 	createShadowBuffer()
 	createPrograms()
 	createEntities()
-	updateView()
+	updateView(0, 0, 0)
 
 	gl.enable(gl.DEPTH_TEST)
 	gl.enable(gl.BLEND)
