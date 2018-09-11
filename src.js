@@ -37,8 +37,7 @@ var M = Math,
 	pointersX = [],
 	pointersY = [],
 	keysDown = [],
-	cursor,
-	cursorY = 0
+	cursor
 
 M.PI2 = M.PI2 || M.PI / 2
 M.TAU = M.TAU || M.PI * 2
@@ -412,16 +411,16 @@ function updateLight(x, y, z) {
 }
 
 function updateView(x, y, z) {
-	translate(viewMat, idMat, x, y, z - 15)
+	translate(viewMat, idMat, x, y, z - 15)// * ymax) //DEBUG
 	rotate(viewMat, viewMat, .5, 1, 0, 0)
 	updateLight(x, y, z)
 }
 
 function update() {
-	var t = Date.now() * .002,
-		mag = 3
-	translate(cursor.matrix, idMat, M.cos(t) * mag, cursorY, M.sin(t) * mag)
-	rotate(cursor.matrix, cursor.matrix, -t % M.TAU, 0, 1, 0)
+	var now = Date.now()
+	for (var i = entitiesLength; i--;) {
+		entities[i].update(now)
+	}
 }
 
 function run() {
@@ -463,7 +462,6 @@ function setPointer(event, down) {
 
 function pointerUp(event) {
 	setPointer(event, false)
-	cursorY = 0
 }
 
 function pointerMove(event) {
@@ -472,7 +470,6 @@ function pointerMove(event) {
 
 function pointerDown(event) {
 	setPointer(event, true)
-	cursorY = -1
 }
 
 function setKey(event, down) {
@@ -623,20 +620,60 @@ function createCube() {
 function createEntities() {
 	entities = []
 
-	var cubeModel = createCube()
-	entities.push(cursor = {
-		matrix: new FA(idMat),
-		model: cubeModel,
-		color: [0, .58, 1, 1]
-	})
+	var mag = .5,
+		cubeModel = createCube(),
+		cubeSize = 2 * mag,
+		cubeRad = cubeSize * .5,
+		dim = 8,
+		offset = dim * cubeSize * .5 - cubeRad,
+		skipX = M.floor(M.random() * dim),
+		skipY = M.floor(M.random() * dim)
 
-	var floorMat = new FA(idMat)
-	translate(floorMat, floorMat, 0, -3, 0)
-	scale(floorMat, floorMat, 4, .1, 4)
-	entities.push({
-		matrix: floorMat,
+	//var tmp = new FA(16)
+	for (var y = 0; y < dim; ++y) {
+		for (var x = 0; x < dim; ++x) {
+			if (x === skipX && y === skipY) {
+				continue
+			}
+			var mat = new FA(idMat),
+				f = (x + y) % 2 ? .1 : 0
+			translate(mat, mat,
+				-offset + x * cubeSize,
+				cubeRad,
+				-offset + y * cubeSize)
+			scale(mat, mat, mag, mag * .25, mag)
+			entities.push({
+				origin: new FA(mat),
+				matrix: mat,
+				model: cubeModel,
+				color: [0, .58 - f, 1 - f, 1],
+				base: (x + y) * .25,
+				start: -256,
+				update: function(now) {
+					var t = now * .002
+					translate(this.matrix, this.origin, 0,
+						this.start + M.sin(this.base + t), 0)
+					//rotate(tmp, idMat, t * .1, 0, 1, 0)
+					//multiply(this.matrix, tmp, this.matrix)
+					this.start = M.min(0, this.start * .9)
+				}
+			})
+		}
+	}
+
+	var mat = new FA(idMat)
+	translate(mat, mat, cubeRad, 1.75, cubeRad)
+	scale(mat, mat, .25, .25, .25)
+	entities.push(cursor = {
+		origin: mat,
+		matrix: new FA(mat),
 		model: cubeModel,
-		color: skyColor
+		color: [1, 1, 1, 1],
+		update: function(now) {
+			var f = M.sin(now * .002) * 12
+			translate(this.matrix, this.origin, f, 0, -f)
+			rotate(this.matrix, this.matrix, now * .002, 0, 1, 0)
+		}
 	})
 
 	entitiesLength = entities.length
@@ -757,8 +794,8 @@ function createShadowBuffer() {
 }
 
 function createLight() {
-	setOrthogonal(lightProjMat, -10, 10, -10, 10, -60, 80)
-	translate(staticLightViewMat, idMat, 0, 0, -60)
+	setOrthogonal(lightProjMat, -10, 10, -10, 10, -40, 50)
+	translate(staticLightViewMat, idMat, 0, 0, -46.5)
 	rotate(staticLightViewMat, staticLightViewMat, M.PI2 * .5, 1, .5, 0)
 	updateLight(0, 0, 0)
 }
