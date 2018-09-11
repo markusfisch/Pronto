@@ -13,6 +13,7 @@
 html, body {
 	margin: 0; padding: 0;
 	background: #111;
+	font: 4vw sans-serif; color: #555;
 	overflow: hidden;
 	-webkit-tap-highlight-color: rgba(0,0,0,0);
 	-webkit-touch-callout: none;
@@ -28,11 +29,24 @@ canvas {
 	width: 100%;
 	height: 100%;
 }
+#Message {
+	position: fixed;
+	width: 100%;
+	padding-top: 20vh;
+	font-weight: bold;
+	text-align: center;
+}
+.Score {
+	font-size: 20vw;
+}
+p {
+	margin: 0; padding: 0;
+}
 </style>
 </head>
 <body>
 <canvas id="Canvas">Sorry, this browser cannot render this content.</canvas>
-<div id="Text"></div>
+<div id="Message"></div>
 <script id="LightVertexShader" type="x-shader/x-vertex">
 attribute vec3 vertex;
 

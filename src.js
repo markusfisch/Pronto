@@ -5,15 +5,18 @@ var M = Math,
 	W = window,
 	FA = Float32Array,
 	gl,
+	message,
+	messageVisible,
 	idMat = new FA([
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1]),
+	camMat = new FA(16),
 	projMat = new FA(idMat),
 	viewMat = new FA(idMat),
 	modelViewMat = new FA(16),
-	horizon = 100,
+	horizon = 50,
 	staticLightViewMat = new FA(16),
 	lightProjMat = new FA(idMat),
 	lightViewMat = new FA(idMat),
@@ -37,6 +40,25 @@ var M = Math,
 	pointersX = [],
 	pointersY = [],
 	keysDown = [],
+	tilesLength = 8,
+	tileMag = .5,
+	tileSize = 2 * tileMag,
+	tileSizeSq = tileSize * tileSize,
+	tileHeight = tileMag * .2,
+	tileColorEven = [0, .58, 1, 1],
+	tileColorOdd = [0, .48, .9, 1],
+	stop,
+	ready,
+	lost,
+	jump,
+	wayX,
+	wayY,
+	wayZ,
+	wayStraights,
+	wayDir,
+	wayIndex,
+	speed,
+	score,
 	cursor
 
 M.PI2 = M.PI2 || M.PI / 2
@@ -309,6 +331,18 @@ function setPerspective(out, fov, aspect, near, far) {
 	out[15] = 0
 }
 
+function setLight(x, y, z) {
+	translate(lightViewMat, staticLightViewMat, x, y, z)
+	lightDirection[0] = lightViewMat[2]
+	lightDirection[1] = lightViewMat[6]
+	lightDirection[2] = lightViewMat[10]
+}
+
+function setCamera(x, y, z) {
+	translate(viewMat, camMat, x, y, z)
+	setLight(x, y, z)
+}
+
 function drawCameraModel(count, uniforms, color) {
 	gl.uniform4fv(uniforms.color, color)
 	gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0)
@@ -403,17 +437,55 @@ function draw() {
 	drawCameraView()
 }
 
-function updateLight(x, y, z) {
-	translate(lightViewMat, staticLightViewMat, x, y, z)
-	lightDirection[0] = lightViewMat[2]
-	lightDirection[1] = lightViewMat[6]
-	lightDirection[2] = lightViewMat[10]
+function setMessage(text) {
+	message.innerHTML = text
 }
 
-function updateView(x, y, z) {
-	translate(viewMat, idMat, x, y, z - 15)// * ymax) //DEBUG
-	rotate(viewMat, viewMat, .5, 1, 0, 0)
-	updateLight(x, y, z)
+function gameOver() {
+	if (!messageVisible) {
+		messageVisible = true
+		setMessage(
+			'<p>You made</p>' +
+			'<p class="Score">' + score + '</p>' +
+			'<p>points!</p>'
+		)
+	}
+}
+
+function pursue() {
+	if (--wayStraights > 0 || M.random() > .5) {
+		wayDir = M.random()
+		wayZ -= tileSize
+	} else {
+		wayX += wayDir > .5 ? tileSize : -tileSize
+		wayStraights = 2 + M.round(M.random() * 4)
+	}
+	++wayIndex
+}
+
+function getTileColor() {
+	return wayIndex % 2 ? tileColorEven : tileColorOdd
+}
+
+function distSq(x1, y1, z1, x2, y2, z2) {
+	var dx = x1 - x2,
+		dy = y1 - y2,
+		dz = z1 - z2
+	return dx*dx + dy*dy + dz*dz
+}
+
+function isTileNear(x, y, z) {
+	for (var i = tilesLength; i--;) {
+		var e = entities[i],
+			em = e.origin,
+			ex = em[12],
+			ey = em[13],
+			ez = em[14]
+		if (distSq(ex, ey, ez, x, y, z) < tileSizeSq) {
+			return true
+		}
+	}
+	return false
 }
 
 function update() {
@@ -421,12 +493,87 @@ function update() {
 	for (var i = entitiesLength; i--;) {
 		entities[i].update(now)
 	}
+
+	if (!ready) {
+		return
+	}
+
+	var cm = cursor.matrix,
+		jx = 0
+
+	if (!lost && jump) {
+		jump = false
+		jx = tileSize * 4
+		if (isTileNear(cm[12] - tileSize, cm[13], cm[14])) {
+			jx = -jx
+		}
+	}
+
+	translate(cm, cm, jx, 0, speed)
+	speed -= .0005
+
+	var cx = cm[12],
+		cy = cm[13],
+		cz = cm[14]
+	setCamera(-cx, 0, -cz)
+
+	var safe = false, off = true
+	for (var i = tilesLength; i--;) {
+		var e = entities[i],
+			em = e.origin,
+			ex = em[12],
+			ey = em[13],
+			ez = em[14],
+			past = ez - cz
+		if (!safe && distSq(ex, ey, ez, cx, cy, cz) < tileSizeSq) {
+			safe = true
+		}
+		if (off && ey > -15) {
+			off = false
+		}
+		if (!lost && past > 3) {
+			translate(em, idMat, wayX, wayY, wayZ)
+			scale(em, em, tileMag, tileHeight, tileMag)
+			e.base = 10 / M.abs(speed)
+			e.drop = false
+			e.color = getTileColor()
+			pursue()
+		} else if (past > 1) {
+			e.drop = true
+			e.base -= 1
+		}
+	}
+
+	if (off) {
+		stop = true
+	}
+	if (!lost && !safe) {
+		lost = now
+		score = M.abs(M.round(cz / (tileSize * 2)))
+	}
+	if (lost) {
+		if (cy < -15) {
+			gameOver()
+		} else {
+			translate(cm, cm, 0, -.5, 0)
+		}
+	}
 }
 
 function run() {
-	requestAnimationFrame(run)
+	!stop && requestAnimationFrame(run)
 	update()
 	draw()
+}
+
+function tryJump() {
+	if (!lost) {
+		jump = true
+	} else if (Date.now() - lost > 2000) {
+		var isStopped = stop
+		reset()
+		isStopped && run()
+	}
 }
 
 function setPointer(event, down) {
@@ -460,8 +607,13 @@ function setPointer(event, down) {
 	event.returnValue = false
 }
 
+function pointerCancel(event) {
+	setPointer(event, false)
+}
+
 function pointerUp(event) {
 	setPointer(event, false)
+	tryJump()
 }
 
 function pointerMove(event) {
@@ -480,6 +632,15 @@ function setKey(event, down) {
 function keyUp(event) {
 	if (keysDown[82]) {
 		W.location.reload(true)
+	} else if (keysDown[83]) {
+		if (stop) {
+			stop = false
+			run()
+		} else {
+			stop = true
+		}
+	} else if (keysDown[32]) {
+		tryJump()
 	}
 	setKey(event, false)
 }
@@ -620,63 +781,67 @@ function createCube() {
 function createEntities() {
 	entities = []
 
-	var mag = .5,
-		cubeModel = createCube(),
-		cubeSize = 2 * mag,
-		cubeRad = cubeSize * .5,
-		dim = 8,
-		offset = dim * cubeSize * .5 - cubeRad,
-		skipX = M.floor(M.random() * dim),
-		skipY = M.floor(M.random() * dim)
-
-	//var tmp = new FA(16)
-	for (var y = 0; y < dim; ++y) {
-		for (var x = 0; x < dim; ++x) {
-			if (x === skipX && y === skipY) {
-				continue
-			}
-			var mat = new FA(idMat),
-				f = (x + y) % 2 ? .1 : 0
-			translate(mat, mat,
-				-offset + x * cubeSize,
-				cubeRad,
-				-offset + y * cubeSize)
-			scale(mat, mat, mag, mag * .25, mag)
-			entities.push({
-				origin: new FA(mat),
-				matrix: mat,
-				model: cubeModel,
-				color: [0, .58 - f, 1 - f, 1],
-				base: (x + y) * .25,
-				start: -256,
-				update: function(now) {
-					var t = now * .002
-					translate(this.matrix, this.origin, 0,
-						this.start + M.sin(this.base + t), 0)
-					//rotate(tmp, idMat, t * .1, 0, 1, 0)
-					//multiply(this.matrix, tmp, this.matrix)
-					this.start = M.min(0, this.start * .9)
+	var cubeModel = createCube()
+	for (var i = tilesLength; i--;) {
+		var mat = new FA(idMat)
+		translate(mat, mat, wayX, wayY, wayZ)
+		scale(mat, mat, tileMag, tileHeight, tileMag)
+		entities.push({
+			origin: new FA(mat),
+			matrix: mat,
+			model: cubeModel,
+			color: getTileColor(),
+			delta: M.sin(i),
+			base: -256,
+			drop: false,
+			update: function(now) {
+				var t = now * .002
+				translate(this.matrix, this.origin, 0,
+					this.base + M.sin(this.delta + t), 0)
+				if (!this.drop && this.base != 0) {
+					this.base *= .9
+					if (M.abs(this.base) < .1) {
+						this.base = 0
+						if (!ready) {
+							ready = true
+						}
+					}
 				}
-			})
-		}
+			}
+		})
+		pursue()
 	}
 
 	var mat = new FA(idMat)
-	translate(mat, mat, cubeRad, 1.75, cubeRad)
+	translate(mat, mat, 0, .5, 0)
 	scale(mat, mat, .25, .25, .25)
 	entities.push(cursor = {
-		origin: mat,
 		matrix: new FA(mat),
 		model: cubeModel,
-		color: [1, 1, 1, 1],
+		color: [0, 1, 1, 1],
 		update: function(now) {
-			var f = M.sin(now * .002) * 12
-			translate(this.matrix, this.origin, f, 0, -f)
-			rotate(this.matrix, this.matrix, now * .002, 0, 1, 0)
 		}
 	})
 
 	entitiesLength = entities.length
+}
+
+function reset() {
+	score = 0
+	speed = -.1
+	stop = false
+	ready = false
+	jump = false
+	lost = 0
+	wayX = wayY = wayZ = 0
+	wayStraights = 3
+	wayDir = M.random()
+	wayIndex = 0
+	setLight(0, 0, 0)
+	setCamera(0, 0, 0)
+	createEntities()
+	messageVisible = false
+	setMessage('')
 }
 
 function cacheUniformLocations(program, uniforms) {
@@ -794,10 +959,14 @@ function createShadowBuffer() {
 }
 
 function createLight() {
-	setOrthogonal(lightProjMat, -10, 10, -10, 10, -40, 50)
-	translate(staticLightViewMat, idMat, 0, 0, -46.5)
+	setOrthogonal(lightProjMat, -20, 20, -20, 20, -40, 80)
+	translate(staticLightViewMat, idMat, 0, 0, -70)
 	rotate(staticLightViewMat, staticLightViewMat, M.PI2 * .5, 1, .5, 0)
-	updateLight(0, 0, 0)
+}
+
+function createCamera() {
+	translate(camMat, idMat, 0, 0, -10)
+	rotate(camMat, camMat, .9, 1, 0, 0)
 }
 
 function getContext() {
@@ -817,12 +986,13 @@ function init() {
 		alert('WebGL not available')
 		return
 	}
+	message = D.getElementById('Message')
 
+	createCamera()
 	createLight()
 	createShadowBuffer()
 	createPrograms()
-	createEntities()
-	updateView(0, 0, 0)
+	reset()
 
 	gl.enable(gl.DEPTH_TEST)
 	gl.enable(gl.BLEND)
@@ -837,14 +1007,14 @@ function init() {
 	D.onmousedown = pointerDown
 	D.onmousemove = pointerMove
 	D.onmouseup = pointerUp
-	D.onmouseout = pointerUp
+	D.onmouseout = pointerCancel
 
 	if ('ontouchstart' in D) {
 		D.ontouchstart = pointerDown
 		D.ontouchmove = pointerMove
 		D.ontouchend = pointerUp
-		D.ontouchleave = pointerUp
-		D.ontouchcancel = pointerUp
+		D.ontouchleave = pointerCancel
+		D.ontouchcancel = pointerCancel
 	}
 
 	run()
