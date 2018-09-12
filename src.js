@@ -498,7 +498,7 @@ function update() {
 		return
 	}
 
-	var cm = cursor.matrix,
+	var cm = cursor.origin,
 		jx = 0
 
 	if (!lost && jump) {
@@ -510,7 +510,9 @@ function update() {
 	}
 
 	translate(cm, cm, jx, 0, speed)
-	speed -= .0005
+	if (speed > -.35) {
+		speed -= .001
+	}
 
 	var cx = cm[12],
 		cy = cm[13],
@@ -528,7 +530,7 @@ function update() {
 		if (!safe && distSq(ex, ey, ez, cx, cy, cz) < tileSizeSq) {
 			safe = true
 		}
-		if (off && ey > -15) {
+		if (off && e.base > -100) {
 			off = false
 		}
 		if (!lost && past > 3) {
@@ -816,10 +818,16 @@ function createEntities() {
 	translate(mat, mat, 0, .5, 0)
 	scale(mat, mat, .25, .25, .25)
 	entities.push(cursor = {
+		origin: mat,
 		matrix: new FA(mat),
 		model: cubeModel,
-		color: [0, 1, 1, 1],
+		color: [1, 1, 1, 1],
+		roll: 8,
 		update: function(now) {
+			if (ready) {
+				this.roll += speed / -.1
+			}
+			rotate(this.matrix, this.origin, this.roll * -.05, 1, .1, .1)
 		}
 	})
 
