@@ -979,9 +979,9 @@ function createShadowBuffer() {
 }
 
 function createLight() {
-	setOrthogonal(lightProjMat, -20, 20, -20, 20, -40, 80)
-	translate(staticLightViewMat, idMat, 0, 0, -70)
-	rotate(staticLightViewMat, staticLightViewMat, M.PI2 * .5, 1, .5, 0)
+	setOrthogonal(lightProjMat, -10, 10, -10, 10, -20, 60)
+	translate(staticLightViewMat, idMat, 0, 0, -55)
+	rotate(staticLightViewMat, staticLightViewMat, M.PI2 * .25, 1, .5, 0)
 }
 
 function createCamera() {
