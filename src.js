@@ -58,6 +58,8 @@ var M = Math,
 	wayDir,
 	wayIndex,
 	speed,
+	shift,
+	targetX,
 	score,
 	cursor
 
@@ -499,24 +501,32 @@ function update() {
 	}
 
 	var cm = cursor.origin,
-		jx = 0
+		cx = cm[12],
+		cy = cm[13],
+		cz = cm[14]
 
 	if (!lost && jump) {
 		jump = false
-		jx = tileSize * 4
-		if (isTileNear(cm[12] - tileSize, cm[13], cm[14])) {
-			jx = -jx
+		targetX = cx
+		if (isTileNear(cx - tileSize, cm[13], cm[14])) {
+			shift = -.3
+			targetX -= tileSize
+		} else {
+			shift = .3
+			targetX += tileSize
 		}
 	}
-
-	translate(cm, cm, jx, 0, speed)
+	var d = M.abs(cx - targetX)
+	if (d < .1) {
+		shift = d * (shift > 0 ? 4 : -4)
+	}
+	translate(cm, cm, shift, 0, speed)
+	if (d < .1) {
+		shift = 0
+	}
 	if (speed > -.35) {
 		speed -= .001
 	}
-
-	var cx = cm[12],
-		cy = cm[13],
-		cz = cm[14]
 	setCamera(-cx, 0, -cz)
 
 	var safe = false, off = true
@@ -837,6 +847,8 @@ function createEntities() {
 function reset() {
 	score = 0
 	speed = -.1
+	shift = 0
+	targetX = 0
 	stop = false
 	ready = false
 	jump = false
