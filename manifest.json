@@ -1,7 +1,0 @@
-{
-	"name": "Pronto",
-	"start_url": "index.html",
-	"background_color": "#111",
-	"display": "standalone",
-	"theme_color": "#111"
-}
