@@ -1,6 +1,6 @@
 # Pronto
 
-<img src="https://raw.githubusercontent.com/markusfisch/Pronto/gh-pages/screenshot-400x250.png" alt="screenshot"/>
+<img src="https://github.com/markusfisch/Pronto/raw/gh_pages/screenshot-400x250.png" alt="screenshot"/>
 
 A very simple reaction game for [js13kGames][js13kgames] 2018.
 The theme was "offline".
