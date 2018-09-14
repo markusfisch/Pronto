@@ -515,6 +515,7 @@ function update() {
 			shift = .3
 			targetX += tileSize
 		}
+		targetX = M.round(targetX / tileSize) * tileSize
 	}
 	var d = M.abs(cx - targetX)
 	if (d < .1) {
@@ -527,6 +528,10 @@ function update() {
 	if (speed > -.35) {
 		speed -= .001
 	}
+
+	cx = cm[12]
+	cy = cm[13]
+	cz = cm[14]
 	setCamera(-cx, 0, -cz)
 
 	var safe = false, off = true
