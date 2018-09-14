@@ -902,10 +902,6 @@ function compileShader(src, type) {
 	var shader = gl.createShader(type)
 	gl.shaderSource(shader, src)
 	gl.compileShader(shader)
-	var error = gl.getShaderInfoLog(shader)
-	if (error.length > 0) {
-		throw error
-	}
 	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
 		throw 'cannot compile shader'
 	}
