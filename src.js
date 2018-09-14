@@ -989,23 +989,9 @@ function createCamera() {
 	rotate(camMat, camMat, .9, 1, 0, 0)
 }
 
-function getContext() {
-	for (var canvas = D.getElementById('Canvas'),
-			ctx,
-			types = ['webgl', 'experimental-webgl'],
-			l = types.length,
-			i = 0; i < l; ++i) {
-		if ((ctx = canvas.getContext(types[i], {alpha: false}))) {
-			return ctx
-		}
-	}
-}
-
 function init() {
-	if (!(gl = getContext())) {
-		alert('WebGL not available')
-		return
-	}
+	var canvas = D.getElementById('Canvas')
+	gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
 	message = D.getElementById('Message')
 
 	createCamera()
