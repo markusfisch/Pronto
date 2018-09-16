@@ -586,7 +586,7 @@ function run() {
 function tryJump() {
 	if (!lost) {
 		jump = true
-	} else if (Date.now() - lost > 2000) {
+	} else if (stop && Date.now() - lost > 2000) {
 		var isStopped = stop
 		reset()
 		isStopped && run()
