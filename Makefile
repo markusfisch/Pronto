@@ -13,4 +13,5 @@ clean:
 	rm -f $(BUILD) $(ARCHIVE)
 
 up: $(BUILD)
-	scp $(BUILD) manifest.json hhsw.de@ssh.strato.de:sites/proto/js13k2018/
+	scp $(BUILD) manifest.json icon_* favicon.ico \
+		hhsw.de@ssh.strato.de:sites/Pronto/
