@@ -27,8 +27,6 @@ var M = Math,
 	shadowDepthTexture,
 	shadowProgram,
 	program,
-	setModel,
-	drawModel,
 	entitiesLength = 0,
 	entities = [],
 	width,
@@ -371,7 +369,7 @@ function setShadowModel(uniforms, mm) {
 	gl.uniformMatrix4fv(uniforms.lightModelViewMat, false, modelViewMat)
 }
 
-function bindModel(attribs, model) {
+function bindCameraModel(attribs, model) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, model.vertices)
 	gl.vertexAttribPointer(attribs.vertex, 3, gl.FLOAT, false, 0, 0)
 	gl.bindBuffer(gl.ARRAY_BUFFER, model.normals)
@@ -379,7 +377,13 @@ function bindModel(attribs, model) {
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.indicies)
 }
 
-function drawEntities(uniforms, attribs) {
+function bindShadowModel(attribs, model) {
+	gl.bindBuffer(gl.ARRAY_BUFFER, model.vertices)
+	gl.vertexAttribPointer(attribs.vertex, 3, gl.FLOAT, false, 0, 0)
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.indicies)
+}
+
+function drawEntities(bindModel, setModel, drawModel, uniforms, attribs) {
 	for (var model, i = entitiesLength; i--;) {
 		var e = entities[i]
 		if (model != e.model) {
@@ -396,6 +400,7 @@ function drawCameraView() {
 		attribs = program.attribs
 
 	gl.useProgram(program)
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null)
 	gl.viewport(0, 0, width, height)
 	gl.clearColor(skyColor[0], skyColor[1], skyColor[2], skyColor[3])
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -410,7 +415,12 @@ function drawCameraView() {
 	gl.bindTexture(gl.TEXTURE_2D, shadowDepthTexture)
 	gl.uniform1i(uniforms.shadowDepthTexture, 0)
 
-	drawEntities(uniforms, attribs)
+	gl.enableVertexAttribArray(attribs.vertex)
+	gl.enableVertexAttribArray(attribs.normal)
+	drawEntities(bindCameraModel, setCameraModel, drawCameraModel,
+		uniforms, attribs)
+	gl.disableVertexAttribArray(attribs.vertex)
+	gl.disableVertexAttribArray(attribs.normal)
 }
 
 function drawShadowMap() {
@@ -426,16 +436,14 @@ function drawShadowMap() {
 
 	gl.uniformMatrix4fv(uniforms.lightProjMat, false, lightProjMat)
 
-	drawEntities(uniforms, attribs)
-	gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+	gl.enableVertexAttribArray(attribs.vertex)
+	drawEntities(bindShadowModel, setShadowModel, drawShadowModel,
+		uniforms, attribs)
+	gl.disableVertexAttribArray(attribs.vertex)
 }
 
 function draw() {
-	setModel = setShadowModel
-	drawModel = drawShadowModel
 	drawShadowMap()
-	setModel = setCameraModel
-	drawModel = drawCameraModel
 	drawCameraView()
 }
 
@@ -643,7 +651,7 @@ function pointerDown(event) {
 
 function setKey(event, down) {
 	keysDown[event.keyCode] = down
-	event.preventDefault()
+	event.stopPropagation()
 }
 
 function keyUp(event) {
@@ -893,7 +901,6 @@ function cacheAttribLocations(program, attribs) {
 		if (loc < 0) {
 			throw 'attribute "' + name + '" not found'
 		}
-		gl.enableVertexAttribArray(loc)
 		program.attribs[name] = loc
 	}
 }
@@ -944,11 +951,6 @@ function createPrograms() {
 		'projMat', 'modelViewMat', 'normalMat',
 		'lightProjMat', 'lightModelViewMat', 'lightDirection',
 		'far', 'sky', 'color', 'shadowDepthTexture'])
-
-	// give normal attribute an index because drawElements() will
-	// refuse to draw anything when normal is unset because the
-	// ARRAY_BUFFER is bound to the normal array
-	shadowProgram.attribs.normal = 1
 }
 
 function createShadowBuffer() {
