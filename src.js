@@ -656,12 +656,8 @@ function keyUp(event) {
 	if (keysDown[82]) {
 		W.location.reload(true)
 	} else if (keysDown[83]) {
-		if (stop) {
-			stop = false
-			run()
-		} else {
-			stop = true
-		}
+		stop ^= true
+		stop || run()
 	} else if (keysDown[32]) {
 		tryJump()
 	}
@@ -780,7 +776,8 @@ function createCube() {
 		-1, 1, 1,
 		1, 1, 1,
 		-1, 1, -1,
-		1, 1, -1],[
+		1, 1, -1
+	],[
 		// front
 		0, 1, 3,
 		0, 3, 2,
@@ -798,7 +795,8 @@ function createCube() {
 		16, 19, 18,
 		// top
 		20, 21, 23,
-		20, 23, 22])
+		20, 23, 22
+	])
 }
 
 function createEntities() {
@@ -913,7 +911,7 @@ function compileShader(src, type) {
 	gl.shaderSource(shader, src)
 	gl.compileShader(shader)
 	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-		throw 'cannot compile shader'
+		throw gl.getShaderInfoLog(shader)
 	}
 	return shader
 }
@@ -924,7 +922,7 @@ function linkProgram(vs, fs) {
 	gl.attachShader(p, fs)
 	gl.linkProgram(p)
 	if (!gl.getProgramParameter(p, gl.LINK_STATUS)) {
-		throw new Error(gl.getProgramInfoLog(p))
+		throw gl.getProgramInfoLog(p)
 	}
 	return p
 }
@@ -959,8 +957,8 @@ function createShadowBuffer() {
 	gl.bindTexture(gl.TEXTURE_2D, shadowDepthTexture)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, shadowDepthTextureSize,
 		shadowDepthTextureSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null)
 
@@ -1003,6 +1001,7 @@ function init() {
 
 	gl.enable(gl.DEPTH_TEST)
 	gl.enable(gl.BLEND)
+	gl.enable(gl.CULL_FACE)
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 	W.onresize = resize
