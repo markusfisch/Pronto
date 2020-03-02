@@ -13,5 +13,5 @@ clean:
 	rm -f $(BUILD) $(ARCHIVE)
 
 up: $(BUILD)
-	scp $(BUILD) manifest.json icon_* favicon.ico \
+	scp $(BUILD) .htaccess service-worker.js manifest.json icon_* favicon.ico \
 		hhsw.de@ssh.strato.de:sites/Pronto/

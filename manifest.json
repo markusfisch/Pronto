@@ -1,5 +1,6 @@
 {
 	"name": "Pronto",
+	"short_name": "Pronto",
 	"icons": [
 		{
 			"src": "icon_192.png",
