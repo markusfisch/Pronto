@@ -10,4 +10,4 @@ Play it [here][play].
 Tap, click or press space to change lanes when it's time.
 
 [js13kgames]: http://js13kgames.com/entries/2018
-[play]: http://hhsw.de/sites/proto/js13k2018/
+[play]: https://pronto.markusfisch.de/
