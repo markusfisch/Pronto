@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
-embed() {
-	while read -r
-	do
-		[[ $REPLY == '<script src="src.js"></script>' ]] && {
-			echo '<script>'
-			closurecompiler < src.js
-			echo '</script>'
+while read -r
+do
+	# embed referenced script
+	[[ $REPLY == *\<script\ src=* ]] && {
+		SRC=${REPLY#*src=\"}
+		SRC=${SRC%%\"*}
+		[ -r "$SRC" ] && {
+			echo -n '<script>'
+			esbuild --minify "$SRC"
+			echo -n '</script>'
 			continue
 		}
-		# skip comments
-		REPLY=${REPLY%%//*}
-		# skip indent
-		REPLY=${REPLY##*$'\t'}
-		# skip empty lines
-		[ "$REPLY" ] || continue
+	}
+	# remove indent
+	REPLY=${REPLY##*$'\t'}
+	# remove empty lines
+	[ "$REPLY" ] || continue
+	# keep preprocessor statements on a line
+	[[ $REPLY == \#* ]] && {
+		echo
 		echo "$REPLY"
-	done
-}
-embed < preview.html
+		continue
+	}
+	# remove line breaks
+	echo -n "$REPLY"
+done

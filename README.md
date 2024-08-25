@@ -9,5 +9,12 @@ Play it [here][play].
 
 Tap, click or press space to change lanes when it's time.
 
+## Build Requirements
+
+[esbuild][esbuild] is used for minification. You can get it with `npm`:
+
+	$ npm install --global esbuild
+
 [js13kgames]: http://js13kgames.com/entries/2018
 [play]: https://pronto.markusfisch.de/
+[esbuild]: https://github.com/evanw/esbuild
