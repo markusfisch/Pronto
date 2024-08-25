@@ -2,4 +2,4 @@
 *.zip
 *.obj
 *.mtl
-index.html
+/htdocs/index.html
