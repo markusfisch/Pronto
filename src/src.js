@@ -46,6 +46,8 @@ var M = Math,
 	tileColorEven = [0, .58, 1, 1],
 	tileColorOdd = [0, .48, .9, 1],
 	stop,
+	warp,
+	last,
 	ready,
 	lost,
 	jump,
@@ -500,6 +502,8 @@ function isTileNear(x, y, z) {
 
 function update() {
 	var now = Date.now()
+	warp = (now - last) / 16
+	last = now
 	for (var i = entitiesLength; i--;) {
 		entities[i].update(now)
 	}
@@ -529,7 +533,7 @@ function update() {
 	if (d < .1) {
 		shift = d * (shift > 0 ? 4 : -4)
 	}
-	translate(cm, cm, shift, 0, speed)
+	translate(cm, cm, shift, 0, speed * warp)
 	if (d < .1) {
 		shift = 0
 	}
